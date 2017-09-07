@@ -40,8 +40,14 @@ mriKGSRoi.py LS --atlasdir ${SUBJECTS_DIR_ORIG}'/ROI_TEMPLATES/KGS2016'
 3dcopy anatomical_brain1.nii.gz anatomical_brain1+orig
 @SUMA_AlignToExperiment -exp_anat anatomical_brain1+orig -surf_anat '../surfaces/'${SUB_ID}'/SUMA/'${SUB_ID}'_SurfVol+orig.' -strip_skull surf_anat -align_centers
 
-# put functional data from volume space into surface space
-mriVol2Surf.py ${SUB_ID} BadHand_Level2_pe1.nii.gz GoodHand_Level2_pe1.nii.gz --surfvol ${SUB_ID}'_SurfVol_ns_Alnd_Exp+orig.'
+# combine functional data into one file and move from volume space into surface space
+export funcDataBad='BadHand_Level2_pe1.nii.gz'
+export funcDataGood='GoodHand_Level2_pe1.nii.gz'
+rm handCombined.nii.gz
+rm *h.handCombined.niml.dset
+3dTcat ${funcDataBad} ${funcDataGood} -prefix handCombined.nii.gz
+3drefit -fbuc -redo_bstat -relabel_all_str 'BadHand GoodHand' handCombined.nii.gz 
+mriVol2Surf.py ${SUB_ID} handCombined.nii.gz --surfvol ${SUB_ID}'_SurfVol_ns_Alnd_Exp+orig.'
 
 # reset freesurfer subjects dir
 export SUBJECTS_DIR=${SUBJECTS_DIR_ORIG}
