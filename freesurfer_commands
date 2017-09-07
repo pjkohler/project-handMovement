@@ -1,0 +1,50 @@
+#!/bin/bash
+
+export curDir=$PWD
+
+# set up freesurfer subjects dir
+export SUBJECTS_DIR_ORIG=${SUBJECTS_DIR} 
+export SUBJECTS_DIR='/Volumes/Denali_4D2/kohler/fMRI_EXP/HandmovementLS/surfaces'
+export DATA_DIR='/Volumes/Denali_4D2/kohler/fMRI_EXP/HandmovementLS/data'
+
+export SUB_ID='LS'
+
+cd ${DATA_DIR}
+# use skull stripped anatomicals as input to freesurfer
+export anatData1='anatomical_brain1.nii.gz'
+export anatData2='anatomical_brain2.nii.gz'
+recon-all -i ${anatData1} -i ${anatData2} -subjid ${SUB_ID}
+# run freesurfer stage 1, w/o skull stripping 
+# afterwards, make a symbolic link or copy T1.mgz to brainmask.auto.mgz 
+# and a link from brainmask.auto.mgz to brainmask.mgz
+recon-all -autorecon1 -noskullstrip -s ${SUB_ID} -3T -cubic
+# run freesurfer stage 2
+recon-all -autorecon2 -s ${SUB_ID} -3T -cubic
+# after adding control points
+recon-all -autorecon2-cp -s ${SUB_ID} -3T -cubic
+# after editing white matter
+recon-all -autorecon2-wm -autorecon3 -s ${SUB_ID} -3T -cubic
+# after eding gray matter 
+recon-all -autorecon-pial -subjid ${SUB_ID} -3T -cubic
+
+# make freesurfer data AFNI/SUMA compatible
+@SUMA_Make_Spec_FS -sid LS
+
+# generate Wang atlas ROIs for LS
+mriWangRoi.py LS --atlasdir ${SUBJECTS_DIR_ORIG}'/ROI_TEMPLATES/Wang2015/ProbAtlas_v4/subj_surf_all'
+
+# generate KGS atlas ROIs for LS
+mriKGSRoi.py LS --atlasdir ${SUBJECTS_DIR_ORIG}'/ROI_TEMPLATES/KGS2016'
+
+# align freesurfer volume to experiment space
+3dcopy anatomical_brain1.nii.gz anatomical_brain1+orig
+@SUMA_AlignToExperiment -exp_anat anatomical_brain1+orig -surf_anat '../surfaces/'${SUB_ID}'/SUMA/'${SUB_ID}'_SurfVol+orig.' -strip_skull surf_anat -align_centers
+
+# put functional data from volume space into surface space
+mriVol2Surf.py ${SUB_ID} BadHand_Level2_pe1.nii.gz GoodHand_Level2_pe1.nii.gz --surfvol ${SUB_ID}'_SurfVol_ns_Alnd_Exp+orig.'
+
+# reset freesurfer subjects dir
+export SUBJECTS_DIR=${SUBJECTS_DIR_ORIG}
+
+# return to original directory
+cd $curDir
