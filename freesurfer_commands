@@ -49,6 +49,40 @@ rm *h.handCombined.niml.dset
 3drefit -fbuc -redo_bstat -relabel_all_str 'BadHand GoodHand' handCombined.nii.gz 
 mriVol2Surf.py ${SUB_ID} handCombined.nii.gz --surfvol ${SUB_ID}'_SurfVol_ns_Alnd_Exp+orig.'
 
+# combine new set of functional data into one file and move from volume space into surface space
+for type in Good Bad
+	do	
+	export beta=${type}'Hand_pe1.nii.gz'
+	export zScore=${type}'Hand_zstat1.nii.gz'
+	export pVal=${type}'Hand_p1.nii.gz'
+	3dTcat ${beta} ${zScore} ${pVal} -prefix ${type}'Combined.nii.gz'
+done
+
+rm badCombined*.nii.gz
+rm goodCombined*.nii.gz
+
+# label
+3drefit -fbuc -redo_bstat -relabel_all_str 'Bad_Beta Bad_Z Bad_p-val' badCombined.nii.gz
+3drefit -fbuc -redo_bstat -relabel_all_str 'Good_Beta Good_Z Good_p-val' goodCombined.nii.gz
+# bad threshold. z-score 3.09
+3dcalc -a badCombined.nii.gz[1] -b badCombined.nii.gz -expr 'step(a-3.09) * b' -prefix badCombined_thresh.nii.gz 
+# god threshold, z-score 3.25
+3dcalc -a goodCombined.nii.gz[1] -b goodCombined.nii.gz -expr 'step(a-3.25) * b' -prefix goodCombined_thresh.nii.gz 
+
+rm handCombined_new.nii.gz
+rm *h.handCombined_new.niml.dset
+3dTcat badCombined_thresh.nii.gz goodCombined_thresh.nii.gz -prefix handCombined_new.nii.gz
+mriVol2Surf.py ${SUB_ID} handCombined_new.nii.gz --mask data --surfvol ${SUB_ID}'_SurfVol_ns_Alnd_Exp+orig.'
+
+# generate ROI labels.
+exprStr='amongst(a,1,2)+amongst(a,3,4)*2+amongst(a,5,6)*3+amongst(a,7,8,9,10,11)*(a-3)+amongst(a,13,14,15,16,17,18,19,20,21)*(a-4)+equals(a,24)*18'
+for hemi in rh lh
+	do 
+		rm ${hemi}.wang_atlas_hand.niml.dset
+		3dcopy ${SUBJECTS_DIR}/${SUB_ID}/wang_atlas/${hemi}.wang_atlas_cluster.niml.dset .
+		3dcalc -a ${hemi}.wang_atlas_cluster.niml.dset -expr $exprStr -prefix ${hemi}.wang_atlas_hand.niml.dset
+done
+
 # reset freesurfer subjects dir
 export SUBJECTS_DIR=${SUBJECTS_DIR_ORIG}
 
