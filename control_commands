@@ -2,15 +2,12 @@
 
 # set up freesurfer subjects dir
 export SUBJECTS_DIR_ORIG=${SUBJECTS_DIR} 
+export SUBJECTS_DIR='/Volumes/Denali_4D2/kohler/fMRI_EXP/Handmovement/surfaces/'
+export DATA_DIR='/Volumes/Denali_4D2/kohler/fMRI_EXP/Handmovement/data/'
 
 for SUB_ID in JZ AO
 do
-
-	# set up freesurfer subjects dir
-	export SUBJECTS_DIR='/Volumes/Denali_4D2/kohler/fMRI_EXP/Handmovement/surfaces/'${SUB_ID}
-	export DATA_DIR='/Volumes/Denali_4D2/kohler/fMRI_EXP/Handmovement/data/'${SUB_ID}
-
-	cd ${DATA_DIR}
+	cd ${DATA_DIR}'/'${SUB_ID}
 	# use un-stripped anatomicals as input to freesurfer
 	export anatData=${SUB_ID}'_anatomy.nii.gz'
 	recon-all -i ${anatData} -subjid ${SUB_ID}
@@ -25,3 +22,9 @@ do
 	# generate KGS atlas ROIs for LS
 	mriKGSRoi.py ${SUB_ID} --atlasdir ${SUBJECTS_DIR_ORIG}'/ROI_TEMPLATES/KGS2016'
 done
+
+# reset freesurfer subjects dir
+export SUBJECTS_DIR=${SUBJECTS_DIR_ORIG}
+
+# return to original directory
+cd $curDir
