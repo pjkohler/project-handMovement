@@ -7,8 +7,8 @@ for SUB_ID in JZ AO
 do
 
 	# set up freesurfer subjects dir
-	export SUBJECTS_DIR='/Volumes/Denali_4D2/kohler/fMRI_EXP/Handmovement/surfaces/${SUB_ID}'
-	export DATA_DIR='/Volumes/Denali_4D2/kohler/fMRI_EXP/Handmovement/data/${SUB_ID}'
+	export SUBJECTS_DIR='/Volumes/Denali_4D2/kohler/fMRI_EXP/Handmovement/surfaces/'${SUB_ID}
+	export DATA_DIR='/Volumes/Denali_4D2/kohler/fMRI_EXP/Handmovement/data/'${SUB_ID}
 
 	cd ${DATA_DIR}
 	# use un-stripped anatomicals as input to freesurfer
