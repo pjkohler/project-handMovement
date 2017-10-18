@@ -10,10 +10,11 @@ do
 	cd ${DATA_DIR}'/'${SUB_ID}
 	# use un-stripped anatomicals as input to freesurfer
 	export anatData=${SUB_ID}'_anatomy.nii.gz'
-	recon-all -i ${anatData} -subjid ${SUB_ID}
+	#recon-all -i ${anatData} -subjid ${SUB_ID}
 	# run freesurfer 
-	recon-all -autorecon-all -s ${SUB_ID} -3T -cubic
+	#recon-all -autorecon-all -s ${SUB_ID} -3T -cubic
 	# make freesurfer data AFNI/SUMA compatible
+	cd ${SUBJECTS_DIR}'/'${SUB_ID}
 	@SUMA_Make_Spec_FS -sid ${SUB_ID}
 
 	# generate Wang atlas ROIs for LS
