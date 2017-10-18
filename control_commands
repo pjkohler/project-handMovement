@@ -1,5 +1,7 @@
 #!/bin/bash
 
+export CUR_DIR=$PWD
+
 # set up freesurfer subjects dir
 export SUBJECTS_DIR_ORIG=${SUBJECTS_DIR} 
 export SUBJECTS_DIR='/Volumes/Denali_4D2/kohler/fMRI_EXP/Handmovement/surfaces/'
@@ -22,10 +24,46 @@ do
 
 	# generate KGS atlas ROIs for LS
 	mriKGSRoi.py ${SUB_ID} --atlasdir ${SUBJECTS_DIR_ORIG}'/ROI_TEMPLATES/KGS2016'
+
+	cd ${DATA_DIR}'/'${SUB_ID}
+	3dcopy ${SUB_ID}'_anatomy_brain.nii.gz' ${SUB_ID}_'anatomy_brain+orig'
+
+	@SUMA_AlignToExperiment -exp_anat ${SUB_ID}_anatomy'_brain+orig.' -surf_anat ${SUBJECTS_DIR}'/'${SUB_ID}'/SUMA/'${SUB_ID}'_SurfVol+orig.' -strip_skull surf_anat -align_centers
+
+	# combine functional data into one file and move from volume space into surface space
+
+	export beta=${SUB_ID}'_movement_4mm_pe1_std.nii.gz'
+	export zScore=${SUB_ID}'_movement_4mm_zstats_std.nii.gz'
+	3dTcat ${beta} ${zScore} -prefix 'rightCombined.nii.gz'
+	
+	# label
+	3drefit -fbuc -redo_bstat -relabel_all_str 'Right_Beta Right_Z' rightCombined.nii.gz
+	if [ "$SUB_ID" == "JZ" ]; then
+		# JZ threshold, z-score 2.99
+		3dcalc -a rightCombined.nii.gz[1] -b rightCombined.nii.gz -expr 'step(a-2.99) * b' -prefix rightCombined_thresh.nii.gz 
+	else
+		# AO threshold, z-score 2.86
+		3dcalc -a rightCombined.nii.gz[1] -b rightCombined.nii.gz -expr 'step(a-2.86) * b' -prefix rightCombined_thresh.nii.gz 
+	fi
+	rm *h.goodCombined_thresh.niml.dset
+	mriVol2Surf.py ${SUB_ID} rightCombined_thresh.nii.gz --mask data --surfvol ${SUB_ID}'_SurfVol_ns_Alnd_Exp+orig.'
+
+	# generate ROI labels.
+	exprStr='amongst(a,1,2)+amongst(a,3,4)*2+amongst(a,5,6)*3+amongst(a,7,8,9,10,11)*(a-3)+amongst(a,13,14,15,16,17,18,19,20,21)*(a-4)+equals(a,24)*18'
+	for hemi in rh lh
+		do 
+			rm ${hemi}.wang_atlas_hand.niml.dset
+			3dcopy ${SUBJECTS_DIR}/${SUB_ID}/wang_atlas/${hemi}.wang_atlas_cluster.niml.dset .
+			3dcalc -a ${hemi}.wang_atlas_cluster.niml.dset -expr $exprStr -prefix ${hemi}.wang_atlas_hand.niml.dset
+	done
+
+	# convert ROIs to volume space
+	mriSurf2Vol.py ${SUB_ID} rh.wang_atlas_hand.niml.dset lh.wang_atlas_hand.niml.dset --mapfunc mode --surfvol ${SUB_ID}_SurfVol_ns_Alnd_Exp+orig.
+
 done
 
 # reset freesurfer subjects dir
 export SUBJECTS_DIR=${SUBJECTS_DIR_ORIG}
 
 # return to original directory
-cd $curDir
+cd $CUR_DIR
